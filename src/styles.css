@@ -1962,3 +1962,122 @@ kbd {
     animation: none !important;
   }
 }
+
+.project-manager {
+  padding: 16px 19px 18px;
+  border-bottom: 1px solid #edf0f3;
+  background: #fcfcfd;
+}
+.project-manager > .field {
+  margin-top: 0;
+}
+.project-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 9px;
+}
+.project-actions button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid #e6e9ef;
+  border-radius: 5px;
+  background: #fff;
+  padding: 7px 3px;
+  font-size: 10px;
+  color: #858c98;
+}
+.project-actions button:hover:not(:disabled) {
+  border-color: #efbdc1;
+  color: #e9303c;
+}
+.screenshot-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px;
+  margin-top: 13px;
+  border: 1px solid #f2d4d8;
+  border-radius: 6px;
+  color: #d94350;
+  background: #fff5f6;
+  font-size: 10px;
+}
+.screenshot-button > span {
+  margin-left: auto;
+  font-size: 9px;
+  color: #c6858c;
+}
+.save-recovery {
+  margin-top: 10px;
+  padding: 10px;
+  background: #fff5e9;
+  border-radius: 5px;
+  font-size: 10px;
+  color: #a1733e;
+  line-height: 1.8;
+}
+.save-recovery button {
+  font-size: 10px;
+  text-decoration: underline;
+  margin: 6px 8px 0 0;
+  padding: 0;
+  color: #a1733e;
+}
+.project-dialog {
+  width: calc(100% - 40px);
+  border: 1px solid #e5e9ef;
+  color: #262934;
+}
+.project-dialog::backdrop {
+  background: #1a203c5c;
+  backdrop-filter: blur(3px);
+}
+.project-dialog input {
+  font-size: 16px;
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+@media (max-width: 760px) {
+  .project-manager {
+    padding: 18px 22px;
+  }
+  .screenshot-button {
+    font-size: 12px;
+  }
+  .project-actions button {
+    padding: 9px 3px;
+    font-size: 11px;
+  }
+  .mobile-controls {
+    gap: 6px;
+  }
+}
+@media (max-width: 380px) {
+  .mobile-controls {
+    padding-left: 10px;
+    padding-right: 10px;
+    gap: 5px;
+  }
+  .mobile-edit {
+    font-size: 11px;
+    padding: 0 9px;
+  }
+  .mobile-controls > div {
+    gap: 3px;
+  }
+  .mobile-controls > div button {
+    width: 26px;
+  }
+  .mobile-controls > .icon-button {
+    width: 25px;
+  }
+}

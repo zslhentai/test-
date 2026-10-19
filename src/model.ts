@@ -190,7 +190,11 @@ export async function processImage(file: File): Promise<string> {
   try {
     const image = new Image();
     image.src = url;
-    await image.decode();
+    try {
+      await image.decode();
+    } catch {
+      throw new Error("图片内容损坏或无法读取，请更换图片");
+    }
     if (!image.naturalWidth || !image.naturalHeight)
       throw new Error("图片内容无法读取");
     const scale = Math.min(

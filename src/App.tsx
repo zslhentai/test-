@@ -16,6 +16,10 @@ import {
   Download,
   Expand,
   ImagePlus,
+  Copy,
+  FolderPlus,
+  Pencil,
+  Trash2,
   LayoutGrid,
   Maximize2,
   Monitor,
@@ -39,7 +43,11 @@ import {
   VARIANTS,
 } from "./model";
 import type { Product, Variant, Workspace } from "./model";
-import { readWorkspace, saveWorkspace } from "./storage";
+import { useProjects } from "./useProjects";
+import ProjectDialog from "./ProjectDialog";
+import type { ProjectAction } from "./ProjectDialog";
+import PriceInput from "./PriceInput";
+import { downloadBlob, exportPreview, safeFilename } from "./exportPreview";
 
 function Field({
   label,
@@ -81,16 +89,20 @@ function UploadSlot({
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
+  const uploadTicket = useRef(0);
   const upload = async (file?: File) => {
     if (!file) return;
+    const ticket = ++uploadTicket.current;
     setBusy(true);
     try {
       await onUpload(file);
     } catch (error) {
       notify(error instanceof Error ? error.message : "图片上传失败，请重试");
     } finally {
-      setBusy(false);
-      if (input.current) input.current.value = "";
+      if (ticket === uploadTicket.current) {
+        setBusy(false);
+        if (input.current) input.current.value = "";
+      }
     }
   };
   return (
@@ -346,13 +358,25 @@ function PhonePreview({
 }
 
 export default function App() {
-  const [workspace, setWorkspace] = useState<Workspace>(createWorkspace);
-  const [loaded, setLoaded] = useState(false);
-  const [loadError, setLoadError] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "error">(
-    "saving",
-  );
   const [toast, setToast] = useState("");
+  const manager = useProjects(setToast);
+  const {
+    workspace,
+    setWorkspace,
+    loaded,
+    loadError,
+    saveStatus,
+    project,
+    projects,
+    busy,
+    saveError,
+  } = manager;
+  const [projectAction, setProjectAction] = useState<ProjectAction | null>(
+    null,
+  );
+  const [exporting, setExporting] = useState(false);
+  const editEpoch = useRef(0);
+  const imageRequests = useRef<Record<string, number>>({});
   const [selected, setSelected] = useState("test");
   const [mobileEditor, setMobileEditor] = useState(false);
   const [width, setWidth] = useState(390);
@@ -360,53 +384,6 @@ export default function App() {
   const [resetOpen, setResetOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
-  const storageReady = useRef(false);
-
-  useEffect(() => {
-    let live = true;
-    readWorkspace()
-      .then((data) => {
-        if (live) {
-          if (data) setWorkspace(data);
-          storageReady.current = true;
-          setLoaded(true);
-        }
-      })
-      .catch(() => {
-        if (live) {
-          setLoadError(true);
-          setSaveStatus("error");
-          setToast(
-            "无法读取本地方案。为保护已有数据，暂不自动覆盖；可导入备份或重置。",
-          );
-          setLoaded(true);
-        }
-      });
-    return () => {
-      live = false;
-    };
-  }, []);
-  useEffect(() => {
-    if (!loaded || !storageReady.current) return;
-    let current = true;
-    setSaveStatus("saving");
-    const timer = window.setTimeout(() => {
-      saveWorkspace(workspace)
-        .then(() => {
-          if (current) setSaveStatus("saved");
-        })
-        .catch(() => {
-          if (current) {
-            setSaveStatus("error");
-            setToast("本地保存失败，请导出方案备份，并检查浏览器存储空间。");
-          }
-        });
-    }, 250);
-    return () => {
-      current = false;
-      clearTimeout(timer);
-    };
-  }, [workspace, loaded]);
   useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(""), 6500);
@@ -414,13 +391,20 @@ export default function App() {
   }, [toast]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && resetOpen) {
+        setResetOpen(false);
+        return;
+      }
       const target = event.target as HTMLElement;
       if (
         event.ctrlKey ||
         event.metaKey ||
         event.altKey ||
         target.closest("input,textarea,select,[contenteditable]") ||
-        !loaded
+        !loaded ||
+        busy ||
+        resetOpen ||
+        !!projectAction
       )
         return;
       const variant = event.key.toUpperCase() as Variant;
@@ -434,7 +418,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [loaded]);
+  }, [loaded, busy, resetOpen, projectAction]);
 
   const update = (patch: Partial<Workspace>) =>
     setWorkspace((value) => ({ ...value, ...patch }));
@@ -466,24 +450,25 @@ export default function App() {
     const blob = new Blob([JSON.stringify(workspace, null, 2)], {
       type: "application/json",
     });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `主图实验室-方案${workspace.active}-${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloadBlob(
+      blob,
+      `${safeFilename(project.name)}-方案${workspace.active}.json`,
+    );
     setToast("方案已导出，包含四张主图和全部商品信息");
   };
   const importPlan = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    const targetId = project.id,
+      epoch = editEpoch.current;
     try {
       if (file.size > 40 * 1024 * 1024)
         throw new Error("方案文件不能超过 40 MB");
       const data = parseWorkspace(JSON.parse(await file.text()));
-      storageReady.current = true;
-      setLoadError(false);
-      setWorkspace(data);
+      if (manager.currentId() !== targetId || editEpoch.current !== epoch)
+        throw new Error("当前项目已切换或重置，请重新导入");
+      editEpoch.current++;
+      if (!(await manager.importWorkspace(data))) return;
       setSelected("test");
       setToast("方案已恢复");
     } catch (error) {
@@ -495,9 +480,89 @@ export default function App() {
     }
   };
   const selectVariant = (active: Variant) => update({ active });
-  const priceInput = (key: "price" | "oldPrice", value: string) => {
-    if (/^\d{1,7}(\.\d{0,2})?$/.test(value)) updateProduct({ [key]: value });
-    else if (!value) updateProduct({ [key]: key === "price" ? "0" : "" });
+  const uploadImage = async (file: File, target: string) => {
+    const targetId = project.id,
+      epoch = editEpoch.current;
+    const request = (imageRequests.current[target] ?? 0) + 1;
+    imageRequests.current[target] = request;
+    const image = await processImage(file);
+    if (
+      manager.currentId() !== targetId ||
+      editEpoch.current !== epoch ||
+      imageRequests.current[target] !== request
+    ) {
+      setToast("图片处理期间项目或内容已改变，未覆盖当前图片，请重新上传");
+      return;
+    }
+    setWorkspace((value) =>
+      VARIANTS.includes(target as Variant)
+        ? {
+            ...value,
+            active: target as Variant,
+            images: { ...value.images, [target]: image },
+          }
+        : {
+            ...value,
+            competitors: value.competitors.map((p) =>
+              p.id === target ? { ...p, image } : p,
+            ),
+          },
+    );
+    setToast(
+      VARIANTS.includes(target as Variant)
+        ? `方案 ${target} 主图已替换`
+        : "竞品主图已替换",
+    );
+  };
+  const screenshot = async () => {
+    if (exporting || !loaded) return;
+    setExporting(true);
+    const node = document.querySelector<HTMLElement>(
+      '[data-testid="phone-preview"]',
+    )!;
+    try {
+      const image = await exportPreview(node);
+      downloadBlob(
+        image,
+        `${safeFilename(project.name)}-方案${workspace.active}-手机预览.png`,
+      );
+      setToast("已导出 3 倍清晰度 PNG，仅包含当前手机屏幕");
+    } catch (error) {
+      setToast(
+        `截图导出失败：${error instanceof Error ? error.message : "请重试"}`,
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
+  const switchProject = async (id: string) => {
+    editEpoch.current++;
+    if (await manager.switchProject(id)) {
+      setSelected("test");
+      if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    }
+  };
+  const projectName =
+    projectAction === "new"
+      ? `未命名项目 ${projects.length + 1}`
+      : projectAction === "copy"
+        ? `${project.name.slice(0, 35)} 副本`
+        : project.name;
+  const confirmProject = async (name: string) => {
+    editEpoch.current++;
+    const ok =
+      projectAction === "new"
+        ? await manager.newProject(name)
+        : projectAction === "copy"
+          ? await manager.copyProject(name)
+          : projectAction === "delete"
+            ? await manager.removeProject()
+            : await manager.renameProject(name);
+    if (ok) {
+      setSelected("test");
+      setToast(projectAction === "delete" ? "项目已删除" : "项目已保存");
+    }
+    return ok;
   };
 
   return (
@@ -514,7 +579,7 @@ export default function App() {
           <span>
             主图实验室<small>IMAGE LAB · 非官方模拟</small>
           </span>
-          <span className="beta">BETA</span>
+          <span className="beta">V1.1</span>
         </a>
         <div className="header-center">
           <span className="workspace-dot" />
@@ -539,6 +604,7 @@ export default function App() {
             className="icon-button"
             title="恢复默认方案"
             aria-label="恢复默认方案"
+            disabled={!loaded || busy}
             onClick={() => setResetOpen(true)}
           >
             <RotateCcw size={16} />
@@ -546,7 +612,7 @@ export default function App() {
           <button
             className="export-button"
             onClick={exportPlan}
-            disabled={!loaded}
+            disabled={!loaded || busy}
           >
             <Download size={15} />
             <span>导出方案</span>
@@ -602,12 +668,94 @@ export default function App() {
                 <X size={18} />
               </button>
             </div>
-            <fieldset className="editor-body" disabled={!loaded}>
+            <fieldset className="editor-body" disabled={!loaded || busy}>
               {loadError && (
                 <div className="storage-warning">
                   本地数据读取失败，自动保存已暂停。请先导出当前方案，或导入有效备份。
                 </div>
               )}
+              <section className="project-manager" aria-label="本地项目管理">
+                <label className="field">
+                  <span className="field-label">
+                    当前项目 <small>{projects.length} 个本地项目</small>
+                  </span>
+                  <select
+                    aria-label="当前项目"
+                    value={project.id}
+                    onChange={(event) => void switchProject(event.target.value)}
+                    disabled={busy || !projects.length}
+                  >
+                    {projects.length ? (
+                      projects.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="unsaved">未保存项目</option>
+                    )}
+                  </select>
+                </label>
+                <div className="project-actions">
+                  <button onClick={() => setProjectAction("new")}>
+                    <FolderPlus size={13} />
+                    新建
+                  </button>
+                  <button
+                    onClick={() => setProjectAction("rename")}
+                    disabled={loadError}
+                  >
+                    <Pencil size={12} />
+                    命名
+                  </button>
+                  <button onClick={() => setProjectAction("copy")}>
+                    <Copy size={12} />
+                    复制
+                  </button>
+                  <button
+                    onClick={() => setProjectAction("delete")}
+                    disabled={loadError}
+                    aria-label="删除当前项目"
+                  >
+                    <Trash2 size={12} />
+                    删除
+                  </button>
+                </div>
+                {saveStatus === "error" && !loadError && (
+                  <div className="save-recovery" role="alert">
+                    <p>
+                      {saveError instanceof Error
+                        ? saveError.message
+                        : "本地保存失败，当前编辑尚未丢弃。"}
+                    </p>
+                    <button onClick={manager.retrySave}>重试保存</button>
+                    <button onClick={() => setProjectAction("copy")}>
+                      另存为新项目
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "重新载入将放弃当前未保存编辑。建议先导出方案或另存为新项目。是否继续？",
+                          )
+                        )
+                          void manager.reloadProject();
+                      }}
+                    >
+                      重新载入
+                    </button>
+                  </div>
+                )}
+                <button
+                  className="screenshot-button"
+                  onClick={() => void screenshot()}
+                  disabled={exporting}
+                >
+                  <Camera size={14} />
+                  {exporting ? "正在生成 PNG…" : "导出手机截图 PNG"}
+                  <span>3×</span>
+                </button>
+              </section>
               <section className="editor-section">
                 <div className="section-heading">
                   <span className="step-number">01</span>
@@ -627,15 +775,7 @@ export default function App() {
                       fit={workspace.imageFit}
                       onSelect={() => selectVariant(variant)}
                       notify={setToast}
-                      onUpload={async (file) => {
-                        const image = await processImage(file);
-                        setWorkspace((value) => ({
-                          ...value,
-                          active: variant,
-                          images: { ...value.images, [variant]: image },
-                        }));
-                        setToast(`方案 ${variant} 主图已替换`);
-                      }}
+                      onUpload={(file) => uploadImage(file, variant)}
                     />
                   ))}
                 </div>
@@ -701,18 +841,10 @@ export default function App() {
                         aria-label="上传竞品主图"
                         onChange={async (e) => {
                           const input = e.target,
-                            file = input.files?.[0],
-                            productId = selected;
+                            file = input.files?.[0];
                           if (!file) return;
                           try {
-                            const image = await processImage(file);
-                            setWorkspace((value) => ({
-                              ...value,
-                              competitors: value.competitors.map((p) =>
-                                p.id === productId ? { ...p, image } : p,
-                              ),
-                            }));
-                            setToast("竞品主图已替换");
+                            await uploadImage(file, selected);
                           } catch (error) {
                             setToast(
                               error instanceof Error
@@ -748,23 +880,23 @@ export default function App() {
                   <Field label="商品价格">
                     <div className="input-with-prefix">
                       <span>¥</span>
-                      <input
-                        aria-label="商品价格"
-                        inputMode="decimal"
+                      <PriceInput
+                        key={`${project.id}:${selected}:${editEpoch.current}:price`}
+                        label="商品价格"
                         value={edited.price}
-                        onChange={(e) => priceInput("price", e.target.value)}
+                        onChange={(value) => updateProduct({ price: value })}
                       />
                     </div>
                   </Field>
                   <Field label="划线价格" hint="可选">
                     <div className="input-with-prefix">
                       <span>¥</span>
-                      <input
-                        aria-label="划线价格"
-                        inputMode="decimal"
-                        placeholder="不显示"
+                      <PriceInput
+                        key={`${project.id}:${selected}:${editEpoch.current}:oldPrice`}
+                        label="划线价格"
                         value={edited.oldPrice}
-                        onChange={(e) => priceInput("oldPrice", e.target.value)}
+                        allowEmpty
+                        onChange={(value) => updateProduct({ oldPrice: value })}
                       />
                     </div>
                   </Field>
@@ -1065,6 +1197,14 @@ export default function App() {
           ))}
         </div>
         <button
+          className="icon-button mobile-screenshot"
+          aria-label="手机导出截图 PNG"
+          onClick={() => void screenshot()}
+          disabled={exporting || !loaded || busy}
+        >
+          <Camera size={19} />
+        </button>
+        <button
           className="icon-button"
           aria-label="手机导出方案"
           onClick={exportPlan}
@@ -1089,6 +1229,15 @@ export default function App() {
         </div>
       )}
       {!loaded && <div className="loading-bar" aria-label="正在读取本地方案" />}
+      {projectAction && (
+        <ProjectDialog
+          key={`${projectAction}:${project.id}`}
+          action={projectAction}
+          name={projectName}
+          onCancel={() => setProjectAction(null)}
+          onConfirm={confirmProject}
+        />
+      )}
       {resetOpen && (
         <div className="dialog-backdrop" onClick={() => setResetOpen(false)}>
           <section
@@ -1110,8 +1259,7 @@ export default function App() {
               <button
                 className="danger-button"
                 onClick={() => {
-                  storageReady.current = true;
-                  setLoadError(false);
+                  editEpoch.current++;
                   setWorkspace(createWorkspace());
                   setSelected("test");
                   setResetOpen(false);
