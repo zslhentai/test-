@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600" role="img" aria-label="头灯广告示意主图"><defs>
+<linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#181e23"/><stop offset=".18" stop-color="#d7dee0"/><stop offset=".27" stop-color="#5b6367"/><stop offset=".45" stop-color="#f2f4e7"/><stop offset=".55" stop-color="#9ea5a7"/><stop offset=".72" stop-color="#202c35"/><stop offset="1" stop-color="#a4b0b4"/></linearGradient>
+<linearGradient id="body"><stop stop-color="#10161b"/><stop offset=".3" stop-color="#59666f"/><stop offset=".45" stop-color="#202b33"/><stop offset=".8" stop-color="#0b0f14"/><stop offset="1" stop-color="#6c777b"/></linearGradient>
+<radialGradient id="lens" cx=".45" cy=".44"><stop stop-color="#fffef5"/><stop offset=".1" stop-color="#ffdf68"/><stop offset=".18" stop-color="#e5b91f"/><stop offset=".26" stop-color="#3e4650"/><stop offset=".31" stop-color="#dce5e8"/><stop offset=".46" stop-color="#98acb5"/><stop offset=".52" stop-color="#f5fdff"/><stop offset=".68" stop-color="#657882"/><stop offset=".83" stop-color="#e9f4f9"/><stop offset="1" stop-color="#3b4b59"/></radialGradient>
+<radialGradient id="glow"><stop stop-color="#fff" stop-opacity=".9"/><stop offset=".35" stop-color="#dcefff" stop-opacity=".35"/><stop offset="1" stop-color="#b5dfff" stop-opacity="0"/></radialGradient>
+<linearGradient id="strap"><stop stop-color="#0a0d0e"/><stop offset=".55" stop-color="#353c3c"/><stop offset="1" stop-color="#131719"/></linearGradient>
+<linearGradient id="rock" x2=".8" y2="1"><stop stop-color="#64716c"/><stop offset=".35" stop-color="#424747"/><stop offset="1" stop-color="#222b2d"/></linearGradient>
+<linearGradient id="beam"><stop stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#e0efff" stop-opacity="0"/></linearGradient>
+<filter id="shadow" x="-.5" y="-.5" width="2" height="2"><feDropShadow dx="7" dy="16" stdDeviation="12" flood-opacity=".65"/></filter>
+<filter id="blur"><feGaussianBlur stdDeviation="13"/></filter>
+<pattern id="knurl" width="9" height="8" patternUnits="userSpaceOnUse"><path d="M0 0L9 8M0 8L9 0" stroke="#adbbc2" stroke-opacity=".13" stroke-width="2"/></pattern>
+</defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#292534"/><stop offset="1" stop-color="#02070e"/></linearGradient><rect width="600" height="600" fill="url(#bg)"/><path d="M0 475L189 434 301 480 456 409 600 501V600H0Z" fill="url(#rock)"/><g font-family="Arial,Microsoft YaHei,sans-serif"><text x="19" y="33" font-weight="900" font-size="25" fill="white">GREYBEE</text><text x="20" y="49" font-size="9" letter-spacing="1.5" fill="white">PROFESSIONAL OUTDOOR</text><path d="M452 0H600V100Q524 126 452 92Z" fill="#f50928"/><text x="467" y="64" font-size="48" font-weight="900" fill="white">11.11</text><text x="472" y="87" font-size="15" fill="white">年度好物节</text></g><g font-family="sans-serif" font-weight="900"><text x="24" y="145" fill="#fff125" font-size="53">夜钓<tspan fill="#f3313d">感应头灯</tspan></text><text x="24" y="187" fill="#f8f7fc" font-size="23">六档调节 持久续航 挥手感应</text></g><path d="M230 386L0 219V565Z" fill="url(#beam)" opacity=".45"/><g transform="translate(80 242) scale(1.13) rotate(14 190 165)" filter="url(#shadow)">
+ <path d="M110 129C80 -74 381 -35 373 152" fill="none" stroke="#bd892c" stroke-width="51"/>
+ <path d="M110 129C80 -74 381 -35 373 152" fill="none" stroke="url(#strap)" stroke-width="45"/>
+ <path d="M110 129C80 -74 381 -35 373 152" fill="none" stroke="#ab8942" stroke-width="2" stroke-dasharray="4 4"/>
+ <text x="163" y="20" font-family="Arial" font-size="15" font-weight="bold" fill="#bd943e" transform="rotate(-15 163 20)">OUTDOOR · PRO</text>
+ <rect x="135" y="95" width="225" height="175" rx="31" fill="url(#body)" stroke="#9ca6a8" stroke-width="3"/>
+ <rect x="150" y="112" width="205" height="140" rx="16" fill="url(#knurl)"/>
+ <path d="M171 101H314L331 113H158Z" fill="#d5d7cb"/>
+ <rect x="206" y="96" width="58" height="13" rx="5" fill="#e8a62b" stroke="#101d26" stroke-width="4"/>
+ <rect x="263" y="132" width="74" height="99" rx="9" fill="#111b23" stroke="#7d8a91" stroke-width="3"/>
+ <path d="M275 146V216M283 146V216M291 146V216M299 146V216M307 146V216M315 146V216" stroke="#41515d" stroke-width="3"/>
+ <path d="M85 117H178C226 122 231 240 182 267H85Z" fill="url(#body)" stroke="#a4aaac" stroke-width="3"/>
+ <ellipse cx="96" cy="190" rx="83" ry="89" fill="#121f29" stroke="url(#metal)" stroke-width="13"/>
+ <ellipse cx="96" cy="190" rx="73" ry="80" fill="url(#metal)" stroke="#ffcc61" stroke-width="4"/>
+ <ellipse cx="96" cy="190" rx="63" ry="70" fill="url(#lens)"/>
+ <path d="M45 159Q78 124 134 145M47 214Q86 251 138 221" fill="none" stroke="#f9ffff" stroke-width="3" opacity=".7"/>
+ <ellipse cx="79" cy="165" rx="35" ry="9" fill="white" opacity=".3" transform="rotate(-40 79 165)"/>
+ <circle cx="338" cy="120" r="4" fill="#b9c8cc"/><circle cx="338" cy="247" r="4" fill="#b9c8cc"/>
+ </g><rect y="551" width="600" height="49" fill="#f39d3c"/><rect x="292" y="551" width="308" height="49" fill="#7f36a5"/><text x="17" y="584" font-family="sans-serif" font-size="27" fill="white" font-weight="bold">强光远射 · 红白双色远光</text></svg>
